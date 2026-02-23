@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="丰达助手">
+<meta name="theme-color" content="#0f1923">
+<link rel="manifest" href="./manifest.json">
+<title>丰达电器助手</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f1923; --ink2:#1a2840; --steel:#2d4263; --muted:#7a8fa8;
+  --paper:#f0f4f8; --warm:#e8ecf0; --card:#ffffff;
+  --blue:#1a6ed8; --blue2:#1558b0;
+  --amber:#d97706; --amber2:#b45309;
+  --red:#dc2626; --red2:#b91c1c;
+  --green:#16a34a; --green2:#15803d;
+  --teal:#0d9488;
+  --border:rgba(45,66,99,.13);
+  --shadow:0 2px 16px rgba(15,25,35,.09),0 1px 4px rgba(15,25,35,.06);
+  --shadow-lg:0 8px 32px rgba(15,25,35,.15),0 2px 8px rgba(15,25,35,.08);
+  --st:env(safe-area-inset-top,0px);
+  --sb:env(safe-area-inset-bottom,0px);
+  --nav-h:62px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:'Noto Sans SC',sans-serif;background:var(--ink);color:var(--ink)}
+
+/* ────── APP SHELL ────── */
+#app{display:flex;flex-direction:column;height:100%;height:100dvh}
+.topbar{
+  background:var(--ink);flex-shrink:0;
+  padding:calc(var(--st) + 10px) 16px 11px;
+  display:flex;align-items:center;gap:10px;
+}
+.topbar-logo{font-size:26px;line-height:1}
+.topbar-info{flex:1}
+.topbar-name{font-family:'Noto Serif SC',serif;font-size:18px;font-weight:900;color:#fff;letter-spacing:.02em}
+.topbar-sub{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px}
+.topbar-date{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px}
+
+.pages{flex:1;overflow:hidden;position:relative;background:var(--paper)}
+.page{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 13px calc(var(--sb) + var(--nav-h) + 14px);
+  opacity:0;pointer-events:none;transition:opacity .15s}
+.page.active{opacity:1;pointer-events:auto}
+
+.bottomnav{
+  background:var(--ink);flex-shrink:0;
+  padding:0 0 calc(var(--sb) + 2px);
+  display:flex;
+}
+.nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:10px 0 6px;border:none;background:none;
+  color:rgba(255,255,255,.35);gap:3px;cursor:pointer;
+  transition:color .15s;position:relative;
+}
+.nav-btn.on{color:var(--blue)}
+.nav-btn.on::after{
+  content:'';position:absolute;top:0;left:30%;right:30%;
+  height:2px;background:var(--blue);border-radius:0 0 3px 3px;
+}
+.nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav-label{font-size:10px;font-weight:500}
+
+/* ────── FAB ────── */
+.fab{
+  position:fixed;right:18px;
+  bottom:calc(var(--sb) + var(--nav-h) + 16px);
+  width:54px;height:54px;border-radius:50%;border:none;
+  background:var(--blue);color:#fff;font-size:26px;font-weight:300;
+  box-shadow:0 4px 16px rgba(26,110,216,.45);
+  cursor:pointer;z-index:50;
+  display:none;align-items:center;justify-content:center;
+  transition:transform .15s,opacity .15s;
+}
+.fab.visible{display:flex}
+.fab:active{transform:scale(.93)}
+
+/* ────── BOTTOM SHEET ────── */
+.sheet-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
+  display:none;opacity:0;transition:opacity .25s;
+}
+.sheet-overlay.open{display:block}
+.sheet-overlay.shown{opacity:1}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;
+  background:#fff;border-radius:20px 20px 0 0;
+  z-index:201;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1,.4,1);
+  max-height:92dvh;display:flex;flex-direction:column;
+  padding-bottom:calc(var(--sb) + 8px);
+}
+.sheet.open{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;background:var(--warm);border-radius:4px;margin:12px auto 0}
+.sheet-title{font-family:'Noto Serif SC',serif;font-size:18px;font-weight:900;padding:14px 18px 4px;color:var(--ink);display:flex;align-items:center;gap:8px}
+.sheet-title-icon{width:32px;height:32px;background:var(--ink);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.sheet-body{overflow-y:auto;padding:10px 18px 16px;flex:1}
+
+/* ────── CARDS ────── */
+.card{background:var(--card);border-radius:15px;box-shadow:var(--shadow);margin-bottom:11px;overflow:hidden}
+.card-head{padding:13px 15px 0;display:flex;align-items:center;gap:8px}
+.ched-icon{width:32px;height:32px;border-radius:9px;background:var(--ink);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.card-title{font-family:'Noto Serif SC',serif;font-size:15px;font-weight:700;color:var(--ink)}
+.card-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.card-body{padding:11px 15px 15px}
+
+/* ────── METRICS ────── */
+.metrics4{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px}
+.mcard{
+  background:var(--ink2);border-radius:13px;padding:14px 13px;
+  position:relative;overflow:hidden;
+}
+.mcard::before{content:attr(data-icon);position:absolute;right:-4px;top:-2px;font-size:48px;opacity:.1;line-height:1}
+.mcard-label{font-size:10px;color:rgba(255,255,255,.45);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.mcard-val{font-family:'Noto Serif SC',serif;font-size:24px;font-weight:900;line-height:1;color:#fff}
+.mcard-val.blue{color:#60a5fa}
+.mcard-val.amber{color:#fbbf24}
+.mcard-val.green{color:#4ade80}
+.mcard-val.red{color:#f87171}
+.mcard-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:4px}
+
+/* ────── QUICKACT ────── */
+.quickact{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:11px}
+.qa-btn{
+  background:var(--card);border-radius:12px;padding:12px 6px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  box-shadow:var(--shadow);cursor:pointer;border:none;
+  transition:transform .12s;
+}
+.qa-btn:active{transform:scale(.94)}
+.qa-icon{font-size:22px}
+.qa-label{font-size:11px;font-weight:600;color:var(--ink);text-align:center}
+
+/* ────── CHART ────── */
+.chart-wrap{padding:4px 0 8px;overflow:hidden}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:80px;padding:0 2px}
+.chart-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.chart-bar{
+  width:100%;background:var(--blue);border-radius:4px 4px 0 0;
+  min-height:3px;transition:height .4s ease;
+  position:relative;
+}
+.chart-bar.today{background:var(--amber)}
+.chart-bar-tip{
+  position:absolute;top:-20px;left:50%;transform:translateX(-50%);
+  font-size:9px;color:var(--muted);white-space:nowrap;font-weight:600;
+  display:block; /* 修改点：直接显示数字 */
+}
+.chart-day{font-size:9px;color:var(--muted);font-weight:500}
+.chart-day.today{color:var(--amber);font-weight:700}
+.chart-empty{text-align:center;padding:30px 0;font-size:13px;color:var(--muted)}
+
+/* ────── FORM ────── */
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.field input,.field select,.field textarea{
+  width:100%;padding:11px 13px;
+  border:2px solid var(--border);border-radius:10px;
+  font-size:16px;font-family:'Noto Sans SC',sans-serif;color:var(--ink);
+  background:var(--paper);outline:none;transition:border-color .15s;
+  appearance:none;-webkit-appearance:none;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);background:#fff}
+.field select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='%237a8fa8'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;
+}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field textarea{resize:none;min-height:68px;font-size:14px}
+
+/* ────── BUTTONS ────── */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  width:100%;padding:14px;border-radius:11px;border:none;
+  font-size:15px;font-family:'Noto Sans SC',sans-serif;font-weight:700;
+  cursor:pointer;transition:transform .1s,filter .1s;
+  letter-spacing:.02em;
+}
+.btn:active{transform:scale(.97);filter:brightness(.93)}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-outline{background:transparent;border:2px solid var(--border);color:var(--ink)}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:8px;width:auto;font-weight:700}
+.btn-red-sm{background:var(--red);color:#fff}
+.btn-amber-sm{background:var(--amber);color:#fff}
+.btn[disabled]{opacity:.4;pointer-events:none}
+
+/* ────── INVENTORY LIST ────── */
+.inv-item{
+  display:flex;align-items:center;
+  border-bottom:1px solid var(--border);
+  position:relative;overflow:hidden;
+  transition:transform .2s ease;
+}
+.inv-item:last-child{border-bottom:none}
+.inv-item-main{
+  display:flex;align-items:center;flex:1;
+  padding:11px 12px 11px 0;gap:10px;
+  cursor:pointer;
+}
+.inv-item.editing .inv-item-main{padding:10px 0}
+.cat-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+  margin-left:2px;
+}
+.inv-item-left{flex:1;min-width:0}
+.inv-item-name{font-size:15px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.inv-item-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.inv-badges{display:flex;gap:6px;margin-left:auto;align-items:center;flex-shrink:0}
+.ibadge{padding:4px 9px;border-radius:7px;text-align:center;min-width:50px}
+.ibadge-label{font-size:9px;opacity:.7}
+.ibadge-val{font-family:'Noto Serif SC',serif;font-size:16px;font-weight:900;line-height:1.1}
+.ibadge-stock{background:var(--ink);color:#fff}
+.ibadge-stock.low{background:var(--red)}
+.ibadge-cost{background:var(--warm);color:var(--ink)}
+
+/* item actions (appear on tap) */
+.inv-item-acts{
+  display:flex;gap:5px;padding-right:4px;
+  opacity:0;max-width:0;overflow:hidden;
+  transition:opacity .2s,max-width .2s;
+}
+.inv-item.show-acts .inv-item-acts{opacity:1;max-width:120px}
+
+/* inline edit */
+.edit-row{display:flex;gap:5px;align-items:flex-end;flex-wrap:wrap;padding:8px 0}
+.efield{display:flex;flex-direction:column;gap:2px}
+.efield span{font-size:10px;color:var(--muted);font-weight:700;text-align:center}
+.efield input{
+  width:68px;padding:6px 7px;border:2px solid var(--blue);border-radius:8px;
+  font-size:15px;text-align:center;background:#fff;color:var(--ink);font-weight:700;
+}
+.efield.wide input{width:90px}
+.econfirm{
+  width:34px;height:34px;border-radius:8px;background:var(--green);
+  border:none;color:#fff;font-size:18px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.ecancel{
+  width:34px;height:34px;border-radius:8px;background:var(--warm);
+  border:none;color:var(--muted);font-size:18px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+}
+.low-tag{
+  font-size:10px;font-weight:700;background:var(--red);color:#fff;
+  padding:1px 6px;border-radius:4px;
+}
+
+/* ────── CATEGORY TABS ────── */
+.cat-tabs{display:flex;gap:7px;overflow-x:auto;padding:0 0 10px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{
+  padding:6px 13px;border-radius:20px;border:none;
+  font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;
+  background:var(--warm);color:var(--muted);transition:all .15s;flex-shrink:0;
+}
+.cat-tab.on{background:var(--blue);color:#fff}
+
+/* ────── SEARCH ────── */
+.search-wrap{position:relative;margin-bottom:10px}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none}
+.search-wrap input{padding-left:36px;padding-right:36px}
+.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;padding:2px}
+
+/* ────── TRANS LIST ────── */
+.trans-item{display:flex;padding:11px 0;border-bottom:1px solid var(--border);gap:10px;align-items:flex-start}
+.trans-item:last-child{border-bottom:none}
+.trans-left{flex:1;min-width:0}
+.trans-date{font-size:10px;color:var(--muted);margin-bottom:2px}
+.trans-name{font-size:14px;font-weight:700;color:var(--ink)}
+.trans-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.trans-remark{font-size:11px;color:var(--teal);margin-top:2px;font-style:italic}
+.trans-right{text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.trans-total{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:900;color:var(--amber)}
+.trans-profit{font-size:11px;font-weight:700}
+
+/* ────── PREVIEW ────── */
+.preview-box{
+  background:var(--ink);border-radius:11px;padding:12px 15px;
+  margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;
+}
+.preview-label{font-size:11px;color:rgba(255,255,255,.45);font-weight:700}
+.preview-val{font-family:'Noto Serif SC',serif;font-size:22px;font-weight:900;color:var(--amber)}
+.preview-profit{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+
+/* ────── INFO PILL ────── */
+.info-pill{background:var(--paper);border-radius:9px;padding:9px 13px;margin-bottom:12px;font-size:13px;color:var(--steel);font-weight:600;border-left:3px solid var(--blue)}
+
+/* ────── TOAST ────── */
+#toast{
+  position:fixed;bottom:calc(var(--sb) + var(--nav-h) + 70px);left:14px;right:14px;
+  background:var(--ink2);color:#fff;padding:13px 17px;border-radius:13px;
+  font-size:14px;font-weight:600;text-align:center;z-index:9999;
+  display:none;box-shadow:var(--shadow-lg);
+}
+#toast.show{display:block;animation:tIn .22s ease}
+#toast.ok{background:var(--green)}
+#toast.err{background:var(--red)}
+@keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ────── DIALOG ────── */
+.dlg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.dlg-overlay.open{display:flex}
+.dlg{background:#fff;border-radius:18px;padding:22px;width:100%;max-width:340px;animation:dIn .18s ease}
+@keyframes dIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:none}}
+.dlg-title{font-family:'Noto Serif SC',serif;font-size:17px;font-weight:900;margin-bottom:8px;color:var(--ink)}
+.dlg-msg{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:18px;white-space:pre-line}
+.dlg-btns{display:flex;gap:9px}
+.dlg-cancel{flex:1;padding:12px;border-radius:9px;border:2px solid var(--border);background:#fff;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer}
+.dlg-ok{flex:1;padding:12px;border-radius:9px;border:none;font-size:14px;font-weight:700;color:#fff;cursor:pointer}
+.dlg-ok.red{background:var(--red)}
+.dlg-ok.blue{background:var(--blue)}
+
+/* ────── SETTINGS ────── */
+.settings-hero{background:var(--ink);border-radius:15px;padding:22px;margin-bottom:11px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.hero-icon{font-size:52px}
+.hero-name{font-family:'Noto Serif SC',serif;font-size:21px;font-weight:900;color:#fff}
+.hero-sub{font-size:11px;color:rgba(255,255,255,.4)}
+.hero-tag{background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:3px 12px;border-radius:20px;margin-top:4px}
+
+.guide-item{display:flex;gap:11px;padding:12px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+.guide-item:last-child{border-bottom:none}
+.guide-icon-wrap{width:36px;height:36px;background:var(--ink);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.guide-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px}
+.guide-desc{font-size:12px;color:var(--muted);line-height:1.6}
+
+.warn-box{background:#fffbeb;border-left:3px solid var(--amber);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#92400e}
+
+/* ────── EMPTY / LOADING ────── */
+.empty-state{padding:36px 20px;text-align:center}
+.empty-icon{font-size:44px;display:block;margin-bottom:9px;opacity:.4}
+.empty-text{font-size:14px;color:var(--muted);font-weight:600}
+.empty-sub{font-size:12px;color:var(--border);margin-top:5px}
+.loading-text{text-align:center;padding:28px;color:var(--muted);font-size:13px}
+
+/* ────── CATEGORY COLORS ────── */
+.c0{background:#6366f1}.c1{background:#10b981}.c2{background:#f59e0b}
+.c3{background:#ef4444}.c4{background:#3b82f6}.c5{background:#8b5cf6}
+.c6{background:#14b8a6}.c7{background:#f97316}.c8{background:#ec4899}
+.c9{background:#64748b}
+
+/* ────── STAT PERIOD TABS ────── */
+.period-tabs{display:flex;background:var(--warm);border-radius:9px;padding:3px;gap:2px;margin-bottom:10px}
+.ptab{flex:1;padding:7px;border:none;border-radius:7px;background:none;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .15s}
+.ptab.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* ────── DATE INPUTS UI ────── */
+input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  padding: 8px 12px;
+  font-family: 'Noto Sans SC', sans-serif;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div class="topbar">
+  <div class="topbar-logo">⚡</div>
+  <div class="topbar-info">
+    <div class="topbar-name">丰达电器助手</div>
+    <div class="topbar-sub">数据本地存储 · 离线可用</div>
+  </div>
+  <div class="topbar-date" id="hdr-date"></div>
+</div>
+
+<div class="pages">
+
+<div class="page active" id="page-home">
+  <div class="metrics4">
+    <div class="mcard" data-icon="💰">
+      <div class="mcard-label" id="d-rev-label">近7天营业额</div>
+      <div class="mcard-val amber" id="d-today-rev">¥0</div>
+      <div class="mcard-sub" id="d-today-cnt">0 笔</div>
+    </div>
+    <div class="mcard" data-icon="📈">
+      <div class="mcard-label" id="d-profit-label">近7天利润</div>
+      <div class="mcard-val green" id="d-month-profit">¥0</div>
+      <div class="mcard-sub" id="d-month-rev">实时统计中</div>
+    </div>
+    <div class="mcard" data-icon="📦">
+      <div class="mcard-label">库存总值</div>
+      <div class="mcard-val blue" id="d-inv-val">¥0</div>
+      <div class="mcard-sub" id="d-inv-cnt">0 种商品</div>
+    </div>
+    <div class="mcard" data-icon="⚠️">
+      <div class="mcard-label">低库存预警</div>
+      <div class="mcard-val red" id="d-low-cnt">0</div>
+      <div class="mcard-sub">件需补货</div>
+    </div>
+  </div>
+
+  <div class="quickact">
+    <button class="qa-btn" onclick="openSheet('restock')"><span class="qa-icon">📥</span><span class="qa-label">进货</span></button>
+    <button class="qa-btn" onclick="openSheet('sale')"><span class="qa-icon">📤</span><span class="qa-label">卖出</span></button>
+    <button class="qa-btn" onclick="switchTab('inv')"><span class="qa-icon">📦</span><span class="qa-label">库存</span></button>
+    <button class="qa-btn" onclick="switchTab('trans')"><span class="qa-icon">📋</span><span class="qa-label">流水</span></button>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="ched-icon">📊</div>
+      <div><div class="card-title">营业额走势</div></div>
+      <div style="margin-left:auto">
+        <div class="period-tabs" style="width:130px">
+          <button class="ptab on" onclick="setChartPeriod(7,this)">7天</button>
+          <button class="ptab" onclick="setChartPeriod(14,this)">14天</button>
+          <button class="ptab" onclick="setChartPeriod(30,this)">30天</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="chart-wrap"><div class="chart-bars" id="chart-bars"></div></div>
+      <div style="display:flex;gap:14px;margin-top:6px">
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:var(--blue);border-radius:2px"></div><span style="font-size:10px;color:var(--muted)">历史</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:var(--amber);border-radius:2px"></div><span style="font-size:10px;color:var(--muted)">今天</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="home-low-card" style="display:none">
+    <div class="card-head">
+      <div class="ched-icon">⚠️</div>
+      <div><div class="card-title">低库存预警</div><div class="card-sub">以下商品需尽快补货</div></div>
+    </div>
+    <div class="card-body" id="home-low-list"></div>
+  </div>
+
+  <div class="card" id="home-today-card" style="display:none">
+    <div class="card-head">
+      <div class="ched-icon">📋</div>
+      <div><div class="card-title">今日流水</div></div>
+    </div>
+    <div class="card-body" id="home-today-list"></div>
+  </div>
+</div><div class="page" id="page-inv">
+  <div class="card">
+    <div class="card-body" style="padding-bottom:10px">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input id="inv-search" placeholder="搜索商品名称…" oninput="renderInv()">
+        <button class="search-clear" id="inv-search-clear" style="display:none" onclick="clearSearch('inv-search')">✕</button>
+      </div>
+      <div class="cat-tabs" id="inv-cat-tabs"></div>
+    </div>
+    <div style="padding:0 15px 14px" id="inv-list"><div class="loading-text">加载中…</div></div>
+  </div>
+</div><div class="page" id="page-trans">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px">
+    <div class="mcard" data-icon="💰"><div class="mcard-label">筛选营业额</div><div class="mcard-val amber" id="t-rev">¥0</div></div>
+    <div class="mcard" data-icon="📈"><div class="mcard-label">筛选利润</div><div class="mcard-val" id="t-profit">¥0</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-body" style="padding-bottom:10px">
+      <div class="search-wrap" style="margin-bottom:12px">
+        <span class="search-icon">🔍</span>
+        <input id="t-search" placeholder="搜索商品名称…" oninput="renderTrans()">
+        <button class="search-clear" id="t-search-clear" style="display:none" onclick="clearSearch('t-search')">✕</button>
+      </div>
+      <div class="cat-tabs" id="t-cat-tabs" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="date" id="t-date-start" onchange="renderTrans()">
+        <span style="color:var(--muted);font-size:12px;font-weight:700">至</span>
+        <input type="date" id="t-date-end" onchange="renderTrans()">
+        <button class="btn btn-sm btn-outline" style="padding:10px;height:100%" onclick="resetTransDate()">重置</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="ched-icon">📒</div>
+      <div><div class="card-title">流水记录</div><div class="card-sub" id="trans-count">共 0 条</div></div>
+    </div>
+    <div class="card-body">
+      <div id="trans-list"><div class="loading-text">加载中…</div></div>
+    </div>
+  </div>
+</div><div class="page" id="page-settings">
+  <div class="settings-hero">
+    <span class="hero-icon">⚡</span>
+    <span class="hero-name">丰达电器助手</span>
+    <span class="hero-sub">数据安全存储在手机本地</span>
+    <span class="hero-tag">v2.0  ·  离线可用</span>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="ched-icon">🏷️</div><div><div class="card-title">商品分类管理</div><div class="card-sub">新增或删除分类标签</div></div></div>
+    <div class="card-body">
+      <div id="cat-manage-list" style="margin-bottom:12px"></div>
+      <div class="row2">
+        <div class="field" style="margin:0"><input id="new-cat-name" placeholder="新分类名称" maxlength="10"></div>
+        <button class="btn btn-blue" style="padding:11px" onclick="addCategory()">＋ 添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="ched-icon">📤</div><div><div class="card-title">数据导出</div><div class="card-sub">导出为CSV，可用Excel打开</div></div></div>
+    <div class="card-body">
+      <button class="btn btn-outline" style="margin-bottom:9px" onclick="exportCSV('inv')">📊 导出库存表</button>
+      <button class="btn btn-outline" onclick="exportCSV('trans')">📋 导出流水表</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="ched-icon">📥</div><div><div class="card-title">数据导入</div><div class="card-sub">从旧版CSV文件恢复数据</div></div></div>
+    <div class="card-body">
+      <div class="warn-box">⚠️ 导入将与现有数据合并，同名商品库存量和成本价会被更新覆盖</div>
+      <button class="btn btn-outline" style="margin-bottom:9px" onclick="document.getElementById('imp-inv').click()">📦 导入库存表 CSV</button>
+      <button class="btn btn-outline" onclick="document.getElementById('imp-trans').click()">💰 导入流水表 CSV</button>
+      <input type="file" id="imp-inv" accept=".csv" style="display:none" onchange="importCSV(this,'inv')">
+      <input type="file" id="imp-trans" accept=".csv" style="display:none" onchange="importCSV(this,'trans')">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="ched-icon">📖</div><div><div class="card-title">使用说明</div></div></div>
+    <div class="card-body"><div id="guide-list"></div></div>
+  </div>
+
+  <div style="height:10px"></div>
+</div></div><nav class="bottomnav">
+  <button class="nav-btn on" id="nav-home" onclick="switchTab('home')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="nav-label">首页</span>
+  </button>
+  <button class="nav-btn" id="nav-inv" onclick="switchTab('inv')">
+    <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+    <span class="nav-label">库存</span>
+  </button>
+  <button class="nav-btn" id="nav-trans" onclick="switchTab('trans')">
+    <svg viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    <span class="nav-label">流水</span>
+  </button>
+  <button class="nav-btn" id="nav-settings" onclick="switchTab('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span class="nav-label">设置</span>
+  </button>
+</nav>
+
+<button class="fab" id="fab-btn" onclick="onFabClick()">＋</button>
+
+<div class="sheet-overlay" id="overlay-restock" onclick="closeSheet('restock')"></div>
+<div class="sheet" id="sheet-restock">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title"><div class="sheet-title-icon">📥</div>进货录入</div>
+  <div class="sheet-body">
+    <div class="field">
+      <label>选择商品</label>
+      <select id="rst-sel" onchange="onRstSel()"></select>
+    </div>
+    <div id="rst-new-fields" style="display:none">
+      <div class="field"><label>新商品名称</label><input id="rst-name" placeholder="输入商品名称"></div>
+      <div class="row2">
+        <div class="field"><label>单位</label><select id="rst-unit" onchange="onRstUnit()">
+          <option>个</option><option>把</option><option>盒</option><option>卷</option>
+          <option>米</option><option>包</option><option>箱</option><option>套</option>
+          <option>根</option><option>条</option><option>片</option><option value="__other">➕ 其他 (手动输入)</option>
+        </select></div>
+        <div class="field"><label>分类</label><select id="rst-cat" onchange="onRstCatChange()"></select></div>
+      </div>
+      <div class="field" id="rst-cat-new-wrap" style="display:none"><label>新分类名称</label><input id="rst-cat-new" placeholder="如：电线、灯具…"></div>
+      <div class="field" id="rst-unit-custom-wrap" style="display:none"><label>自定义单位</label><input id="rst-unit-custom" placeholder="如：桶、组…"></div>
+    </div>
+    <div id="rst-exist-info"></div>
+    <div class="row2">
+      <div class="field"><label>进货数量</label><input id="rst-qty" type="number" min="0" step="1" placeholder="0" inputmode="decimal"></div>
+      <div class="field"><label>进货单价（元）</label><input id="rst-price" type="number" min="0" step="0.01" placeholder="0.00" inputmode="decimal"></div>
+    </div>
+    <div class="field"><label>低库存警戒线（件）</label><input id="rst-threshold" type="number" min="1" step="1" placeholder="默认 5" inputmode="decimal"></div>
+    <div class="field"><label>备注（选填）</label><input id="rst-remark" placeholder="选填"></div>
+    <button class="btn btn-green" onclick="submitRestock()">✅ 确认进货</button>
+    <div style="height:8px"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="overlay-sale" onclick="closeSheet('sale')"></div>
+<div class="sheet" id="sheet-sale">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title"><div class="sheet-title-icon">📤</div>卖出登记</div>
+  <div class="sheet-body">
+    <div class="field">
+      <label>选择商品</label>
+      <select id="sale-sel" onchange="onSaleSel()"></select>
+    </div>
+    <div id="sale-new-fields" style="display:none">
+      <div class="field"><label>新商品名称</label><input id="sale-name" placeholder="输入商品名称"></div>
+      <div class="field"><label>单位</label><select id="sale-unit" onchange="onSaleUnit()">
+        <option>个</option><option>把</option><option>盒</option><option>卷</option>
+        <option>米</option><option>包</option><option>箱</option><option>套</option>
+        <option>根</option><option value="__other">➕ 其他 (手动输入)</option>
+      </select></div>
+      <div class="field" id="sale-unit-custom-wrap" style="display:none"><label>自定义单位</label><input id="sale-unit-custom" placeholder="如：桶、组…"></div>
+    </div>
+    <div id="sale-exist-info"></div>
+    <div class="row2">
+      <div class="field"><label>卖出数量</label><input id="sale-qty" type="number" min="1" step="1" value="1" oninput="updatePreview()" inputmode="decimal"></div>
+      <div class="field"><label>卖出单价（元）</label><input id="sale-price" type="number" min="0" step="0.01" value="0" oninput="updatePreview()" inputmode="decimal"></div>
+    </div>
+    <div class="preview-box" id="preview-box" style="display:none">
+      <div><div class="preview-label">预计进账</div><div class="preview-profit" id="preview-profit"></div></div>
+      <div class="preview-val" id="preview-val">¥0.00</div>
+    </div>
+    <div class="field"><label>备注（客户/工地，选填）</label><input id="sale-remark" placeholder="如：张师傅、3号工地…"></div>
+    <button class="btn btn-blue" onclick="submitSale()">💰 确认卖出入账</button>
+    <div style="height:8px"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div class="dlg-overlay" id="dlg-del"><div class="dlg">
+  <div class="dlg-title">确认删除</div>
+  <div class="dlg-msg" id="dlg-del-msg"></div>
+  <div class="dlg-btns">
+    <button class="dlg-cancel" onclick="closeDlg('del')">取消</button>
+    <button class="dlg-ok red" onclick="confirmDel()">删除</button>
+  </div>
+</div></div>
+
+<div class="dlg-overlay" id="dlg-del-item"><div class="dlg">
+  <div class="dlg-title">删除商品</div>
+  <div class="dlg-msg" id="dlg-del-item-msg"></div>
+  <div class="dlg-btns">
+    <button class="dlg-cancel" onclick="closeDlg('del-item')">取消</button>
+    <button class="dlg-ok red" onclick="confirmDelItem()">确认删除</button>
+  </div>
+</div></div>
+
+<script>
+// ══════════════════════════════════════
+//  IndexedDB
+// ══════════════════════════════════════
+const DB_NAME='FengdaDB', DB_VER=2;
+let _db=null;
+function openDB(){
+  if(_db) return Promise.resolve(_db);
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(DB_NAME,DB_VER);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains('inventory')){
+        const s=db.createObjectStore('inventory',{keyPath:'id',autoIncrement:true});
+        s.createIndex('name','name',{unique:true});
+      }
+      if(!db.objectStoreNames.contains('transactions')){
+        const s=db.createObjectStore('transactions',{keyPath:'id',autoIncrement:true});
+        s.createIndex('date','date'); s.createIndex('name','name');
+      }
+      if(!db.objectStoreNames.contains('categories')){
+        db.createObjectStore('categories',{keyPath:'id',autoIncrement:true});
+      }
+    };
+    req.onsuccess=e=>{_db=e.target.result;res(_db)};
+    req.onerror=e=>rej(e.target.error);
+  });
+}
+function txs(store,mode='readonly'){
+  return openDB().then(db=>db.transaction(store,mode).objectStore(store));
+}
+function idbAll(s){return txs(s).then(st=>new Promise((r,j)=>{const q=st.getAll();q.onsuccess=()=>r(q.result);q.onerror=e=>j(e.target.error)}))}
+function idbGet(s,k){return txs(s).then(st=>new Promise((r,j)=>{const q=st.get(k);q.onsuccess=()=>r(q.result);q.onerror=e=>j(e.target.error)}))}
+function idbGetIdx(s,idx,v){return txs(s).then(st=>new Promise((r,j)=>{const q=st.index(idx).get(v);q.onsuccess=()=>r(q.result);q.onerror=e=>j(e.target.error)}))}
+function idbPut(s,obj){return txs(s,'readwrite').then(st=>new Promise((r,j)=>{const q=st.put(obj);q.onsuccess=()=>r(q.result);q.onerror=e=>j(e.target.error)}))}
+function idbAdd(s,obj){return txs(s,'readwrite').then(st=>new Promise((r,j)=>{const q=st.add(obj);q.onsuccess=()=>r(q.result);q.onerror=e=>j(e.target.error)}))}
+function idbDel(s,k){return txs(s,'readwrite').then(st=>new Promise((r,j)=>{const q=st.delete(k);q.onsuccess=()=>r();q.onerror=e=>j(e.target.error)}))}
+
+// ══════════════════════════════════════
+//  State
+// ══════════════════════════════════════
+let allInv=[],allTrans=[],allCats=[];
+let editingInvId=null,activeInvActId=null;
+let delPendingId=null,delItemPendingId=null;
+let chartPeriod=7;
+let activeInvCat='all', activeTransCat='all';
+const CAT_COLORS=['#6366f1','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#14b8a6','#f97316','#ec4899','#64748b'];
+const UNITS=['个','把','盒','卷','米','包','箱','套','根','条','片'];
+const LOW_DEFAULT=5;
+
+// ══════════════════════════════════════
+//  Business Logic
+// ══════════════════════════════════════
+function r2(n){return Math.round(n*100)/100}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function escA(s){return String(s).replace(/"/g,'&quot;')}
+
+async function getItem(name){return idbGetIdx('inventory','name',name)}
+
+async function processRestock(name,qty,price,unit,cat,threshold,remark){
+  let item=await getItem(name);
+  if(!item){
+    await idbAdd('inventory',{name,stock:0,unit:unit||'个',cost:0,cat:cat||'',threshold:threshold||LOW_DEFAULT,remark:''});
+    item=await getItem(name);
+  }
+  item.stock=r2(item.stock+qty);
+  item.cost=price;
+  if(cat!==undefined) item.cat=cat;
+  if(threshold) item.threshold=threshold;
+  if(remark) item.remark=remark;
+  await idbPut('inventory',item);
+  return {ok:true,msg:'进货录入成功 ✓'};
+}
+
+async function processSale(name,qty,price,unit,remark){
+  let item=await getItem(name);
+  if(!item){
+    await idbAdd('inventory',{name,stock:0,unit:unit||'个',cost:0,cat:'',threshold:LOW_DEFAULT,remark:''});
+    item=await getItem(name);
+  }
+  item.stock=r2(item.stock-qty);
+  await idbPut('inventory',item);
+  const today=todayStr();
+  const total=r2(qty*price);
+  const profit=r2((price-item.cost)*qty);
+  const existing=allTrans.find(t=>t.date===today&&t.name===name&&!t.remark&&!remark);
+  if(existing&&!remark){
+    existing.qty=r2(existing.qty+qty);
+    existing.total=r2(existing.total+total);
+    existing.profit=r2(existing.profit+profit);
+    existing.price=price;
+    await idbPut('transactions',existing);
+  } else {
+    await idbAdd('transactions',{date:today,name,qty,price,total,profit,remark:remark||''});
+  }
+  return {ok:true,msg:`卖出成功  进账 ¥${total}  利润 ¥${profit}`};
+}
+
+async function deleteItem(id){
+  await idbDel('inventory',id);
+}
+
+async function deleteTrans(id){
+  await idbDel('transactions',id);
+}
+
+// ══════════════════════════════════════
+//  Categories
+// ══════════════════════════════════════
+async function loadCats(){
+  allCats=await idbAll('categories');
+}
+async function addCategory(){
+  const name=document.getElementById('new-cat-name').value.trim();
+  if(!name){toast('请输入分类名称','err');return}
+  if(allCats.find(c=>c.name===name)){toast('该分类已存在','err');return}
+  await idbAdd('categories',{name});
+  document.getElementById('new-cat-name').value='';
+  await loadCats();
+  renderCatManage();
+  renderCatTabs();
+  populateSheetCatSel();
+  toast('分类已添加','ok');
+}
+async function delCategory(id){
+  await idbDel('categories',id);
+  await loadCats();
+  renderCatManage();
+  renderCatTabs();
+  populateSheetCatSel();
+  renderInv();
+  renderTrans();
+  toast('已删除','ok');
+}
+function renderCatManage(){
+  const el=document.getElementById('cat-manage-list');
+  if(!allCats.length){el.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px 0">暂无自定义分类</div>`;return}
+  el.innerHTML=allCats.map((c,i)=>`
+    <div style="display:flex;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);gap:10px">
+      <div style="width:12px;height:12px;border-radius:50%;background:${CAT_COLORS[i%CAT_COLORS.length]};flex-shrink:0"></div>
+      <span style="flex:1;font-size:14px;font-weight:600">${escH(c.name)}</span>
+      <button class="btn btn-sm" style="background:var(--red);color:#fff;padding:5px 12px" onclick="delCategory(${c.id})">删除</button>
+    </div>`).join('');
+}
+function renderCatTabs(){
+  const invTabsEl = document.getElementById('inv-cat-tabs');
+  const transTabsEl = document.getElementById('t-cat-tabs');
+  
+  const generateTabs = (activeVal, onClickFunc) => {
+    return `<button class="cat-tab ${activeVal==='all'?'on':''}" onclick="${onClickFunc}('all')">全部</button>` +
+      allCats.map((c,i)=>`<button class="cat-tab ${activeVal===String(c.id)?'on':''}" onclick="${onClickFunc}('${c.id}')">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${CAT_COLORS[i%CAT_COLORS.length]};margin-right:4px;vertical-align:middle"></span>${escH(c.name)}</button>`).join('');
+  };
+
+  invTabsEl.innerHTML = generateTabs(activeInvCat, 'setInvCat');
+  transTabsEl.innerHTML = generateTabs(activeTransCat, 'setTransCat');
+}
+function setInvCat(v){activeInvCat=v;renderCatTabs();renderInv()}
+function setTransCat(v){activeTransCat=v;renderCatTabs();renderTrans()}
+
+// 补充商品下拉框选项，确保每次调用时列表完整
+function populateSheetSelects(){
+  const rs=document.getElementById('rst-sel');
+  rs.innerHTML=`<option value="__new__">➕ 其他 (手动输入新商品)</option>`+
+    allInv.map(i=>`<option value="${escA(i.name)}">${escH(i.name)}</option>`).join('');
+    
+  const ss=document.getElementById('sale-sel');
+  ss.innerHTML=`<option value="">—— 请选择商品 ——</option><option value="__new__">➕ 其他 (手动输入新商品)</option>`+
+    allInv.map(i=>`<option value="${escA(i.name)}">${escH(i.name)}</option>`).join('');
+}
+
+function populateSheetCatSel(){
+  const sel=document.getElementById('rst-cat');
+  sel.innerHTML=`<option value="">无分类</option><option value="__new__">➕ 其他 (新增分类)</option>`+
+    allCats.map(c=>`<option value="${c.id}">${escH(c.name)}</option>`).join('');
+}
+
+function catColor(catId){
+  const idx=allCats.findIndex(c=>String(c.id)===String(catId));
+  return idx>=0?CAT_COLORS[idx%CAT_COLORS.length]:'var(--muted)';
+}
+function catName(catId){
+  const c=allCats.find(c=>String(c.id)===String(catId));
+  return c?c.name:'';
+}
+
+// ══════════════════════════════════════
+//  Inventory Render
+// ══════════════════════════════════════
+async function loadInv(){
+  allInv=await idbAll('inventory');
+  allInv.sort((a,b)=>a.name.localeCompare(b.name,'zh'));
+  renderInv();
+  populateSheetSelects(); // 在加载完库存后更新下拉菜单
+}
+
+function renderInv(){
+  const search=document.getElementById('inv-search').value.trim();
+  document.getElementById('inv-search-clear').style.display=search?'':'none';
+  let list=allInv;
+  if(search) list=list.filter(i=>i.name.includes(search));
+  if(activeInvCat!=='all') list=list.filter(i=>String(i.cat)===activeInvCat);
+
+  if(!list.length){
+    document.getElementById('inv-list').innerHTML=`<div class="empty-state"><span class="empty-icon">📭</span><div class="empty-text">${search?'没有找到该商品':'暂无库存商品'}</div><div class="empty-sub">${search?'':'点击右下角＋按钮进货录入'}</div></div>`;
+    return;
+  }
+
+  document.getElementById('inv-list').innerHTML=list.map(item=>{
+    const low=item.stock<(item.threshold||LOW_DEFAULT);
+    const cname=catName(item.cat);
+    const ccolor=item.cat?catColor(item.cat):'transparent';
+    if(editingInvId===item.id){
+      return `<div class="inv-item editing" id="irow-${item.id}">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--ink)">${escH(item.name)}</div>
+          <div class="edit-row">
+            <div class="efield"><span>库存</span><input class="ei" id="ei-stock" type="number" value="${item.stock}" step="0.1" inputmode="decimal"></div>
+            <div class="efield"><span>成本(元)</span><input class="ei" id="ei-cost" type="number" value="${item.cost}" step="0.01" inputmode="decimal"></div>
+            <div class="efield"><span>预警线</span><input class="ei" id="ei-threshold" type="number" value="${item.threshold||LOW_DEFAULT}" step="1" inputmode="decimal"></div>
+            <div class="efield wide"><span>备注</span><input class="ei" id="ei-remark" value="${escH(item.remark||'')}"></div>
+            <button class="econfirm" onclick="saveInvEdit(${item.id})">✓</button>
+            <button class="ecancel" onclick="editingInvId=null;renderInv()">✕</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    const isActOpen=activeInvActId===item.id;
+    return `<div class="inv-item${low?' low':''} ${isActOpen?'show-acts':''}" id="irow-${item.id}">
+      <div class="inv-item-main" onclick="toggleInvAct(${item.id})">
+        <div class="cat-dot" style="background:${ccolor}"></div>
+        <div class="inv-item-left">
+          <div class="inv-item-name">
+            ${escH(item.name)}
+            ${low?`<span class="low-tag">⚠️补货</span>`:''}
+            ${cname?`<span style="font-size:10px;color:var(--muted);font-weight:700;background:var(--paper);padding:2px 6px;border-radius:4px;margin-left:4px">${escH(cname)}</span>`:''}
+          </div>
+          <div class="inv-item-meta">${item.unit} · 成本 ¥${item.cost}${item.remark?' · '+escH(item.remark):''}</div>
+        </div>
+        <div class="inv-badges">
+          <div class="ibadge ibadge-stock${low?' low':''}">
+            <div class="ibadge-val">${item.stock}</div>
+            <div class="ibadge-label">库存</div>
+          </div>
+        </div>
+      </div>
+      <div class="inv-item-acts">
+        <button class="btn btn-sm btn-amber-sm" onclick="startInvEdit(${item.id});activeInvActId=null">编辑</button>
+        <button class="btn btn-sm btn-red-sm" onclick="askDelItem(${item.id},'${escA(item.name)}')">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleInvAct(id){
+  if(activeInvActId===id){activeInvActId=null}
+  else{activeInvActId=id}
+  renderInv();
+}
+function startInvEdit(id){editingInvId=id;activeInvActId=null;renderInv();setTimeout(()=>document.getElementById('ei-stock')?.focus(),60)}
+async function saveInvEdit(id){
+  const item=await idbGet('inventory',id);
+  if(!item) return;
+  item.stock=parseFloat(document.getElementById('ei-stock').value)||0;
+  item.cost=parseFloat(document.getElementById('ei-cost').value)||0;
+  item.threshold=parseInt(document.getElementById('ei-threshold').value)||LOW_DEFAULT;
+  item.remark=document.getElementById('ei-remark').value;
+  await idbPut('inventory',item);
+  editingInvId=null;
+  toast('已保存 ✓','ok');
+  await refreshAll();
+}
+function askDelItem(id,name){
+  delItemPendingId=id;
+  document.getElementById('dlg-del-item-msg').textContent=`确定要删除商品「${name}」吗？\n删除后该商品的库存数据将永久消失，流水记录不受影响。`;
+  document.getElementById('dlg-del-item').classList.add('open');
+}
+async function confirmDelItem(){
+  if(!delItemPendingId) return;
+  await deleteItem(delItemPendingId);
+  delItemPendingId=null;
+  closeDlg('del-item');
+  toast('商品已删除','ok');
+  await refreshAll();
+}
+
+// ══════════════════════════════════════
+//  Transactions Render
+// ══════════════════════════════════════
+async function loadTrans(){
+  allTrans=await idbAll('transactions');
+  allTrans.sort((a,b)=>b.date>a.date?1:-1);
+  renderTrans();
+  populateSheetSelects();
+}
+
+function resetTransDate(){
+  document.getElementById('t-date-start').value='';
+  document.getElementById('t-date-end').value='';
+  renderTrans();
+}
+
+function renderTrans(){
+  const search=document.getElementById('t-search').value.trim();
+  document.getElementById('t-search-clear').style.display=search?'':'none';
+  
+  // 建立商品分类映射以供流水检索
+  const itemCatMap = {};
+  allInv.forEach(i => itemCatMap[i.name] = i.cat);
+
+  let rows=allTrans;
+  
+  // 1. 搜索名称
+  if(search) rows=rows.filter(r=>r.name.includes(search));
+  
+  // 2. 分类筛选
+  if(activeTransCat!=='all') rows=rows.filter(r=>String(itemCatMap[r.name]||'')===activeTransCat);
+  
+  // 3. 日期区间筛选
+  const dStart = document.getElementById('t-date-start').value;
+  const dEnd = document.getElementById('t-date-end').value;
+  if(dStart) rows=rows.filter(r=>r.date>=dStart);
+  if(dEnd) rows=rows.filter(r=>r.date<=dEnd);
+
+  const rev=r2(rows.reduce((s,r)=>s+(r.total||0),0));
+  const profit=r2(rows.reduce((s,r)=>s+(r.profit||0),0));
+  document.getElementById('t-rev').textContent='¥'+rev;
+  const pe=document.getElementById('t-profit');
+  pe.textContent='¥'+profit;
+  pe.className='mcard-val '+(profit>=0?'green':'red');
+  document.getElementById('trans-count').textContent=`共 ${rows.length} 条`;
+
+  if(!rows.length){
+    document.getElementById('trans-list').innerHTML=`<div class="empty-state"><span class="empty-icon">📭</span><div class="empty-text">暂无流水记录</div></div>`;
+    return;
+  }
+  document.getElementById('trans-list').innerHTML=rows.map(r=>{
+    const cId=itemCatMap[r.name];
+    const cname=catName(cId);
+    return `
+    <div class="trans-item">
+      <div class="trans-left">
+        <div class="trans-date">${r.date}</div>
+        <div class="trans-name">
+          ${escH(r.name)}
+          ${cname?`<span style="font-size:10px;color:var(--muted);font-weight:500;background:var(--paper);padding:2px 4px;border-radius:4px;margin-left:4px">${escH(cname)}</span>`:''}
+        </div>
+        <div class="trans-meta">单价 ¥${r.price} × ${r.qty} ${r.qty===1?'件':'件'}</div>
+        ${r.remark?`<div class="trans-remark">📝 ${escH(r.remark)}</div>`:''}
+      </div>
+      <div class="trans-right">
+        <div class="trans-total">¥${r.total}</div>
+        <div class="trans-profit" style="color:${r.profit>=0?'var(--green)':'var(--red)'}">利润 ¥${r.profit}</div>
+        <button class="btn btn-sm btn-red-sm" style="margin-top:5px" onclick="askDel(${r.id},'${escA(r.name)}',${r.qty})">删除</button>
+      </div>
+    </div>`
+  }).join('');
+}
+
+function askDel(id,name,qty){
+  delPendingId=id;
+  document.getElementById('dlg-del-msg').textContent=`确定删除「${name}」的这条流水记录吗？`;
+  document.getElementById('dlg-del').classList.add('open');
+}
+async function confirmDel(){
+  if(!delPendingId) return;
+  await deleteTrans(delPendingId);
+  delPendingId=null;
+  closeDlg('del');
+  toast('已删除','ok');
+  await refreshAll();
+}
+function closeDlg(id){document.getElementById('dlg-'+id).classList.remove('open')}
+
+// ══════════════════════════════════════
+//  Dashboard
+// ══════════════════════════════════════
+function renderDashboard(){
+  const today = new Date();
+  const past = new Date(today);
+  past.setDate(past.getDate() - chartPeriod + 1);
+  const startDs = past.toISOString().slice(0,10);
+  const endDs = today.toISOString().slice(0,10);
+
+  const periodTrans = allTrans.filter(r => r.date >= startDs && r.date <= endDs);
+  const periodRev = r2(periodTrans.reduce((s,r)=>s+(r.total||0),0));
+  const periodProfit = r2(periodTrans.reduce((s,r)=>s+(r.profit||0),0));
+
+  document.getElementById('d-rev-label').textContent = `近 ${chartPeriod} 天营业额`;
+  document.getElementById('d-today-rev').textContent = '¥' + periodRev;
+  document.getElementById('d-today-cnt').textContent = periodTrans.length + ' 笔';
+
+  document.getElementById('d-profit-label').textContent = `近 ${chartPeriod} 天利润`;
+  document.getElementById('d-month-profit').textContent = '¥' + periodProfit;
+  document.getElementById('d-month-profit').className = 'mcard-val ' + (periodProfit >= 0 ? 'green' : 'red');
+
+  const invVal=r2(allInv.reduce((s,i)=>s+(i.stock*i.cost),0));
+  document.getElementById('d-inv-val').textContent='¥'+invVal;
+  document.getElementById('d-inv-cnt').textContent=allInv.length+' 种商品';
+
+  const lowItems=allInv.filter(i=>i.stock<(i.threshold||LOW_DEFAULT));
+  document.getElementById('d-low-cnt').textContent=lowItems.length;
+
+  // low stock card
+  const lowCard=document.getElementById('home-low-card');
+  if(lowItems.length){
+    lowCard.style.display='';
+    document.getElementById('home-low-list').innerHTML=lowItems.map(i=>`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:14px;font-weight:700">${escH(i.name)}</div>
+          <div style="font-size:11px;color:var(--muted)">当前 ${i.stock} ${i.unit}，警戒 ${i.threshold||LOW_DEFAULT} ${i.unit}</div>
+        </div>
+        <button class="btn btn-sm btn-green" onclick="openSheet('restock')" style="padding:6px 12px">补货</button>
+      </div>`).join('');
+  } else { lowCard.style.display='none'; }
+
+  // today summary (一直显示今天的)
+  const todayStrDate = today.toISOString().slice(0,10);
+  const todayTrans = allTrans.filter(r=>r.date === todayStrDate);
+  const todayCard=document.getElementById('home-today-card');
+  if(todayTrans.length){
+    todayCard.style.display='';
+    document.getElementById('home-today-list').innerHTML=todayTrans.slice(0,5).map(r=>`
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:14px;font-weight:700">${escH(r.name)}</div><div style="font-size:11px;color:var(--muted)">${r.qty}件 × ¥${r.price}${r.remark?' · '+escH(r.remark):''}</div></div>
+        <div style="text-align:right"><div style="font-family:'Noto Serif SC',serif;font-weight:900;color:var(--amber)">¥${r.total}</div><div style="font-size:10px;color:${r.profit>=0?'var(--green)':'var(--red)'};font-weight:700">+¥${r.profit}</div></div>
+      </div>`).join('')+
+      (todayTrans.length>5?`<div style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0;cursor:pointer" onclick="switchTab('trans');resetTransDate();document.getElementById('t-date-start').value='${todayStrDate}';document.getElementById('t-date-end').value='${todayStrDate}';renderTrans();">查看全部 ${todayTrans.length} 条 →</div>`:'');
+  } else { todayCard.style.display='none'; }
+
+  renderChart(chartPeriod);
+}
+
+// ══════════════════════════════════════
+//  Chart
+// ══════════════════════════════════════
+function setChartPeriod(n,btn){
+  chartPeriod=n;
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderDashboard(); // 同步刷新核心指标和图表
+}
+function renderChart(days){
+  const el=document.getElementById('chart-bars');
+  const today=new Date();
+  const data=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(today);d.setDate(d.getDate()-i);
+    const ds=d.toISOString().slice(0,10);
+    const rev=r2(allTrans.filter(t=>t.date===ds).reduce((s,t)=>s+(t.total||0),0));
+    const label=i===0?'今天':`${d.getMonth()+1}/${d.getDate()}`;
+    data.push({ds,rev,label,isToday:i===0});
+  }
+  const max=Math.max(...data.map(d=>d.rev),1);
+  if(data.every(d=>d.rev===0)){
+    el.innerHTML=`<div class="chart-empty" style="width:100%">暂无营业数据</div>`;
+    return;
+  }
+  el.innerHTML=data.map(d=>{
+    const h=Math.max(Math.round((d.rev/max)*72),d.rev>0?4:1);
+    return `<div class="chart-bar-col">
+      <div class="chart-bar${d.isToday?' today':''}" style="height:${h}px">
+        ${d.rev>0?`<div class="chart-bar-tip">¥${d.rev}</div>`:''}
+      </div>
+      <div class="chart-day${d.isToday?' today':''}">${d.label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════
+//  Sheet (底部抽屉)
+// ══════════════════════════════════════
+let currentSheet=null;
+function openSheet(name){
+  if(currentSheet) closeSheet(currentSheet);
+  currentSheet=name;
+  const ov=document.getElementById('overlay-'+name);
+  const sh=document.getElementById('sheet-'+name);
+  ov.classList.add('open');
+  requestAnimationFrame(()=>{ov.classList.add('shown');sh.classList.add('open')});
+  if(name==='restock') prepRstSheet();
+  if(name==='sale') prepSaleSheet();
+}
+function closeSheet(name){
+  const ov=document.getElementById('overlay-'+name);
+  const sh=document.getElementById('sheet-'+name);
+  ov.classList.remove('shown');sh.classList.remove('open');
+  setTimeout(()=>{ov.classList.remove('open');currentSheet=null},280);
+}
+
+// ══════════════════════════════════════
+//  Sheet: Restock
+// ══════════════════════════════════════
+function prepRstSheet(){
+  document.getElementById('rst-sel').value='__new__';
+  document.getElementById('rst-name').value='';
+  document.getElementById('rst-qty').value='';
+  document.getElementById('rst-price').value='';
+  document.getElementById('rst-remark').value='';
+  document.getElementById('rst-threshold').value='';
+  document.getElementById('rst-exist-info').innerHTML='';
+  document.getElementById('rst-new-fields').style.display='';
+  document.getElementById('rst-cat-new-wrap').style.display='none';
+  populateSheetCatSel();
+  onRstSel();
+}
+function onRstSel(){
+  const val=document.getElementById('rst-sel').value;
+  const isNew=val==='__new__';
+  document.getElementById('rst-new-fields').style.display=isNew?'':'none';
+  const info=document.getElementById('rst-exist-info');
+  if(!isNew){
+    const item=allInv.find(i=>i.name===val);
+    if(item){
+      info.innerHTML=`<div class="info-pill">单位：${item.unit}　当前库存：${item.stock}　成本：¥${item.cost}</div>`;
+      document.getElementById('rst-price').value=item.cost;
+      document.getElementById('rst-threshold').value=item.threshold||LOW_DEFAULT;
+    }
+    info.style.display='';
+  } else {
+    info.style.display='none';
+    document.getElementById('rst-price').value='';
+  }
+}
+function onRstUnit(){
+  const v=document.getElementById('rst-unit').value;
+  document.getElementById('rst-unit-custom-wrap').style.display=v==='__other'?'':'none';
+}
+function onRstCatChange(){
+  const v=document.getElementById('rst-cat').value;
+  document.getElementById('rst-cat-new-wrap').style.display=v==='__new__'?'':'none';
+}
+
+async function submitRestock(){
+  const sel=document.getElementById('rst-sel').value;
+  let name,unit,cat,threshold;
+  if(sel==='__new__'){
+    name=document.getElementById('rst-name').value.trim();
+    const u=document.getElementById('rst-unit').value;
+    unit=u==='__other'?document.getElementById('rst-unit-custom').value.trim():u;
+    cat=document.getElementById('rst-cat').value;
+    
+    if(cat === '__new__'){
+      const newCatName = document.getElementById('rst-cat-new').value.trim();
+      if(newCatName){
+        const existCat = allCats.find(c=>c.name===newCatName);
+        if(existCat){
+          cat = existCat.id;
+        }else{
+          await idbAdd('categories',{name:newCatName});
+          await loadCats();
+          cat = allCats.find(c=>c.name===newCatName).id;
+          renderCatManage();
+          renderCatTabs();
+          populateSheetCatSel();
+        }
+      } else { cat=''; }
+    }
+
+    if(!name){toast('请填写商品名称','err');return}
+  } else {
+    name=sel;
+    const item=allInv.find(i=>i.name===name);
+    unit=item?.unit||'个';
+    cat=item?.cat||'';
+  }
+  const qty=parseFloat(document.getElementById('rst-qty').value)||0;
+  const price=parseFloat(document.getElementById('rst-price').value)||0;
+  threshold=parseInt(document.getElementById('rst-threshold').value)||0;
+  const remark=document.getElementById('rst-remark').value.trim();
+  const r=await processRestock(name,qty,price,unit,cat||undefined,threshold||undefined,remark);
+  toast(r.msg,r.ok?'ok':'err');
+  closeSheet('restock');
+  await refreshAll();
+}
+
+// ══════════════════════════════════════
+//  Sheet: Sale
+// ══════════════════════════════════════
+function prepSaleSheet(){
+  document.getElementById('sale-sel').value='';
+  document.getElementById('sale-name').value='';
+  document.getElementById('sale-qty').value='1';
+  document.getElementById('sale-price').value='0';
+  document.getElementById('sale-remark').value='';
+  document.getElementById('sale-unit').value='个';
+  document.getElementById('sale-unit-custom-wrap').style.display='none';
+  document.getElementById('sale-unit-custom').value='';
+  document.getElementById('sale-new-fields').style.display='none';
+  document.getElementById('sale-exist-info').innerHTML='';
+  document.getElementById('preview-box').style.display='none';
+}
+async function onSaleSel(){
+  const val=document.getElementById('sale-sel').value;
+  const isNew=val==='__new__';
+  document.getElementById('sale-new-fields').style.display=isNew?'':'none';
+  const info=document.getElementById('sale-exist-info');
+  if(val&&!isNew){
+    const item=allInv.find(i=>i.name===val);
+    const hist=allTrans.filter(r=>r.name===val);
+    const lastPrice=hist.length?hist[0].price:(item?.cost||0);
+    document.getElementById('sale-price').value=lastPrice;
+    if(item) info.innerHTML=`<div class="info-pill">库存：${item.stock} ${item.unit}　成本：¥${item.cost}　上次售价：¥${lastPrice}</div>`;
+    info.style.display='';
+  } else { info.innerHTML='';info.style.display='none'; }
+  document.getElementById('preview-box').style.display=(val&&val!=='__new__')?'':'none';
+  updatePreview();
+}
+function onSaleUnit(){
+  const v=document.getElementById('sale-unit').value;
+  document.getElementById('sale-unit-custom-wrap').style.display=v==='__other'?'':'none';
+}
+function updatePreview(){
+  const qty=parseFloat(document.getElementById('sale-qty').value)||0;
+  const price=parseFloat(document.getElementById('sale-price').value)||0;
+  const sel=document.getElementById('sale-sel').value;
+  const item=allInv.find(i=>i.name===sel);
+  const profit=item?r2((price-item.cost)*qty):0;
+  document.getElementById('preview-val').textContent='¥'+r2(qty*price).toFixed(2);
+  document.getElementById('preview-profit').textContent=`毛利润 ¥${profit}`;
+  document.getElementById('preview-profit').style.color=profit>=0?'rgba(255,255,255,.5)':'#f87171';
+}
+async function submitSale(){
+  const sel=document.getElementById('sale-sel').value;
+  let name,unit='个';
+  if(!sel){toast('请选择商品','err');return}
+  if(sel==='__new__'){
+    name=document.getElementById('sale-name').value.trim();
+    const u=document.getElementById('sale-unit').value;
+    unit=u==='__other'?document.getElementById('sale-unit-custom').value.trim():u;
+    if(!name){toast('请填写商品名称','err');return}
+  } else { name=sel; }
+  const qty=parseFloat(document.getElementById('sale-qty').value)||0;
+  const price=parseFloat(document.getElementById('sale-price').value)||0;
+  const remark=document.getElementById('sale-remark').value.trim();
+  if(qty<=0){toast('数量需大于0','err');return}
+  const r=await processSale(name,qty,price,unit,remark);
+  toast(r.msg,r.ok?'ok':'err');
+  closeSheet('sale');
+  await refreshAll();
+}
+
+// ══════════════════════════════════════
+//  FAB
+// ══════════════════════════════════════
+let currentTab='home';
+function onFabClick(){
+  if(currentTab==='inv') openSheet('restock');
+  else if(currentTab==='trans') openSheet('sale');
+}
+
+// ══════════════════════════════════════
+//  Navigation
+// ══════════════════════════════════════
+function switchTab(tab){
+  currentTab=tab;
+  ['home','inv','trans','settings'].forEach(t=>{
+    document.getElementById('page-'+t).classList.toggle('active',t===tab);
+    document.getElementById('nav-'+t)?.classList.toggle('on',t===tab);
+  });
+  const fab=document.getElementById('fab-btn');
+  if(tab==='inv'){fab.classList.add('visible');fab.title='进货录入'}
+  else if(tab==='trans'){fab.classList.add('visible');fab.title='卖出登记'}
+  else fab.classList.remove('visible');
+}
+
+// ══════════════════════════════════════
+//  Search clear
+// ══════════════════════════════════════
+function clearSearch(id){document.getElementById(id).value='';document.getElementById(id+'-clear').style.display='none';if(id==='inv-search')renderInv();else renderTrans()}
+
+// ══════════════════════════════════════
+//  Toast
+// ══════════════════════════════════════
+let toastTimer=null;
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='show '+type;
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.className='',2600);
+}
+
+// ══════════════════════════════════════
+//  CSV Import / Export
+// ══════════════════════════════════════
+function parseCSV(text){
+  const lines=text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  if(lines.length<2) return[];
+  const headers=lines[0].replace(/^\uFEFF/,'').split(',').map(h=>h.trim());
+  return lines.slice(1).map(l=>{const cols=l.split(',');const o={};headers.forEach((h,i)=>o[h]=(cols[i]||'').trim());return o});
+}
+async function importCSV(input,type){
+  const file=input.files[0];if(!file) return;
+  const text=await file.text();
+  const rows=parseCSV(text);let count=0;
+  if(type==='inv'){
+    for(const r of rows){
+      if(!r['商品名称']) continue;
+      
+      let cId = '';
+      if(r['分类']){
+        let exC = allCats.find(c=>c.name===r['分类']);
+        if(!exC) { await idbAdd('categories',{name:r['分类']}); await loadCats(); exC = allCats.find(c=>c.name===r['分类']); }
+        cId = exC.id;
+      }
+
+      const ex=await getItem(r['商品名称']);
+      if(ex){
+        ex.stock=parseFloat(r['库存量'])||ex.stock;
+        ex.unit=r['单位']||ex.unit;
+        ex.cost=parseFloat(r['成本'])||ex.cost;
+        ex.cat=cId||ex.cat;
+        ex.remark=r['备注']||ex.remark;
+        await idbPut('inventory',ex)
+      } else {
+        await idbAdd('inventory',{name:r['商品名称'],stock:parseFloat(r['库存量'])||0,unit:r['单位']||'个',cost:parseFloat(r['成本'])||0,cat:cId,threshold:LOW_DEFAULT,remark:r['备注']||''});
+      }
+      count++;
+    }
+  } else {
+    for(const r of rows){
+      if(!r['时间']||!r['商品名称']) continue;
+      
+      // 同步处理分类逻辑
+      let cId = '';
+      if(r['分类']){
+        let exC = allCats.find(c=>c.name===r['分类']);
+        if(!exC) { await idbAdd('categories',{name:r['分类']}); await loadCats(); exC = allCats.find(c=>c.name===r['分类']); }
+        cId = exC.id;
+      }
+      
+      let exI = await getItem(r['商品名称']);
+      if(!exI) {
+        await idbAdd('inventory',{name:r['商品名称'],stock:0,unit:'个',cost:parseFloat(r['单价'])||0,cat:cId,threshold:LOW_DEFAULT,remark:''});
+      } else if(cId && !exI.cat) {
+        exI.cat = cId;
+        await idbPut('inventory', exI);
+      }
+
+      await idbAdd('transactions',{date:r['时间'].replace(/\//g,'-'),name:r['商品名称'],qty:parseFloat(r['数量'])||0,price:parseFloat(r['单价'])||0,total:parseFloat(r['总价'])||0,profit:parseFloat(r['利润'])||0,remark:r['备注']||''});
+      count++;
+    }
+  }
+  input.value='';toast(`导入成功，共 ${count} 条记录`,'ok');await refreshAll();
+}
+async function exportCSV(type){
+  let content,filename;
+  if(type==='inv'){
+    const rows=await idbAll('inventory');
+    content='\uFEFF商品名称,分类,库存量,单位,成本,备注\n'+rows.map(r=>`${r.name},${catName(r.cat)},${r.stock},${r.unit},${r.cost},${r.remark||''}`).join('\n');
+    filename=`库存表_${todayStr()}.csv`;
+  } else {
+    const rows=await idbAll('transactions');
+    const invs=await idbAll('inventory');
+    const cmap={};
+    invs.forEach(i=>cmap[i.name]=catName(i.cat));
+
+    content='\uFEFF时间,商品名称,分类,数量,单价,总价,利润,备注\n'+rows.map(r=>`${r.date},${r.name},${cmap[r.name]||''},${r.qty},${r.price},${r.total},${r.profit},${r.remark||''}`).join('\n');
+    filename=`流水表_${todayStr()}.csv`;
+  }
+  const blob=new Blob([content],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+  URL.revokeObjectURL(url);toast(`导出成功：${filename}`,'ok');
+}
+
+// ══════════════════════════════════════
+//  Guide
+// ══════════════════════════════════════
+const GUIDES=[
+  {icon:'🏠',title:'首页仪表盘',desc:'显示营业额、利润、库存总值及低库存预警，一眼掌握经营状况'},
+  {icon:'📦',title:'库存管理',desc:'点击商品行展开操作菜单，可编辑或删除；右下角＋快速进货'},
+  {icon:'🏷️',title:'商品分类',desc:'在设置页添加分类（如电线、开关、灯具），库存与流水皆可筛选'},
+  {icon:'📤',title:'卖出登记',desc:'流水页右下角＋快速开单，支持填写客户/工地备注，自动计算利润'},
+  {icon:'⚠️',title:'低库存预警',desc:'每个商品可自定义警戒线，进货时设置，低于警戒线自动红色提醒'},
+  {icon:'📊',title:'营业图表',desc:'首页显示近7/14/30天营业额柱状图与实时合计利润，直观了解销售趋势'},
+  {icon:'💾',title:'数据备份',desc:'定期在设置页导出CSV备份；也可导入以前的历史数据'},
+  {icon:'📲',title:'添加到桌面',desc:'浏览器点"分享"→"添加到主屏幕"，即可像App一样使用'},
+];
+function renderGuide(){
+  document.getElementById('guide-list').innerHTML=GUIDES.map(g=>`
+    <div class="guide-item">
+      <div class="guide-icon-wrap">${g.icon}</div>
+      <div><div class="guide-title">${g.title}</div><div class="guide-desc">${g.desc}</div></div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════
+//  Header date
+// ══════════════════════════════════════
+function updateDate(){
+  const d=new Date();
+  const w=['日','一','二','三','四','五','六'][d.getDay()];
+  document.getElementById('hdr-date').textContent=`${d.getMonth()+1}月${d.getDate()}日 周${w}`;
+}
+
+// ══════════════════════════════════════
+//  Refresh All
+// ══════════════════════════════════════
+async function refreshAll(){
+  await Promise.all([loadInv(),loadTrans()]);
+  renderDashboard();
+  renderCatTabs();
+  renderCatManage();
+}
+
+// ══════════════════════════════════════
+//  Init
+// ══════════════════════════════════════
+(async()=>{
+  updateDate();
+  renderGuide();
+  await openDB();
+  await loadCats();
+  populateSheetCatSel();
+  await refreshAll();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+})();
+</script>
+</body>
+</html>
